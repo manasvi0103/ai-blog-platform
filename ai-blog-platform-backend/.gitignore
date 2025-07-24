@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env.production
+logs/
+*.log
+.DS_Store
+.vscode/
+dist/
+build/
+coverage/
+.nyc_output/
+temp/
+service-account-key.json
