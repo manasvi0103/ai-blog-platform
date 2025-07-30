@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { Link, ExternalLink, Eye, Smartphone, Monitor, Upload, CheckCircle, AlertCircle } from "lucide-react"
+import { Link, ExternalLink, Upload, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
 import type { InternalLink, ExternalLink as ExternalLinkType, BlogBlock } from "@/types/api"
 import { api } from "@/lib/api"
 import { StepperHeader } from "@/components/stepper-header"
@@ -18,10 +18,13 @@ export default function ReviewPage() {
   const [externalLinks, setExternalLinks] = useState<ExternalLinkType[]>([])
   const [blogContent, setBlogContent] = useState<BlogBlock[]>([])
   const [publishAsDraft, setPublishAsDraft] = useState(true)
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop")
-  const [wordPressStatus, setWordPressStatus] = useState<"connected" | "disconnected" | "checking">("checking")
+
+
   const [loading, setLoading] = useState(true)
   const [deploying, setDeploying] = useState(false)
+  const [deploymentSuccess, setDeploymentSuccess] = useState(false)
+  const [wordpressUrl, setWordpressUrl] = useState<string | null>(null)
+  const [reviewData, setReviewData] = useState<any>(null)
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
@@ -30,78 +33,171 @@ export default function ReviewPage() {
 
   useEffect(() => {
     loadReviewData()
-    checkWordPressConnection()
   }, [])
+
+
 
   const loadReviewData = async () => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      setLoading(true)
 
-      // Mock review data
-      const mockInternalLinks = [
+      console.log('📋 Loading draft data and links for review...')
+
+      // First, get the draft data to extract company information
+      const draftData = await api.getDraft(draftId)
+      setReviewData(draftData)
+
+      console.log('📄 Draft data loaded:', draftData)
+
+      // Get REAL links from the backend
+      const linksResponse = await api.generateLinks(draftId)
+
+      console.log('🔗 Real links received:', linksResponse)
+
+      // Use real links from backend
+      const realInternalLinks = linksResponse.internalLinks || []
+      const realExternalLinks = linksResponse.externalLinks || []
+
+      console.log(`✅ Loaded ${realInternalLinks.length} internal and ${realExternalLinks.length} external links`)
+
+      // Fallback links only if no real links are generated
+      const fallbackInternalLinks = [
         {
-          anchorText: "business process automation guide",
-          targetUrl: "/blog/business-process-automation-complete-guide",
-          context: "Learn more about comprehensive business process automation strategies",
-          relevance: 92,
-        },
-        {
-          anchorText: "small business CRM solutions",
-          targetUrl: "/services/crm-implementation",
-          context: "Discover our CRM implementation services for small businesses",
+          anchorText: "solar installation services",
+          targetUrl: "/services/solar-installation",
+          context: "Professional solar installation services",
           relevance: 88,
         },
         {
-          anchorText: "workflow optimization consulting",
-          targetUrl: "/services/workflow-optimization",
-          context: "Get expert help optimizing your business workflows",
+          anchorText: "solar panel maintenance",
+          targetUrl: "/services/maintenance",
+          context: "Comprehensive maintenance programs",
+          relevance: 92,
+        },
+        {
+          anchorText: "solar financing options",
+          targetUrl: "/financing",
+          context: "Flexible financing solutions",
           relevance: 85,
         },
       ]
 
-      const mockExternalLinks = [
+      const fallbackExternalLinks = [
         {
-          anchorText: "Zapier automation platform",
-          targetDomain: "zapier.com",
-          context: "Official Zapier platform for creating automated workflows",
+          anchorText: "NREL Solar Research",
+          targetDomain: "nrel.gov",
+          targetUrl: "https://www.nrel.gov/solar/",
+          context: "National Renewable Energy Laboratory",
           relevance: 95,
         },
         {
-          anchorText: "HubSpot CRM features",
-          targetDomain: "hubspot.com",
-          context: "Comprehensive overview of HubSpot's CRM capabilities",
+          anchorText: "SEIA Industry Data",
+          targetDomain: "seia.org",
+          targetUrl: "https://www.seia.org/solar-industry-research-data",
+          context: "Solar Energy Industries Association",
           relevance: 90,
         },
         {
-          anchorText: "McKinsey AI research report",
-          targetDomain: "mckinsey.com",
-          context: "Authoritative research on AI adoption in business",
+          anchorText: "Energy.gov Solar Office",
+          targetDomain: "energy.gov",
+          targetUrl: "https://www.energy.gov/eere/solar/solar-energy-technologies-office",
+          context: "U.S. Department of Energy Solar Technologies",
           relevance: 87,
         },
       ]
 
-      const mockBlogContent = [
-        {
-          id: "intro-1",
-          type: "introduction" as const,
-          content:
-            "In today's fast-paced business environment, small business owners are constantly looking for ways to streamline operations...",
-          editable: true,
-          wordCount: 124,
-        },
-        {
-          id: "feature-img-1",
-          type: "image" as const,
-          imageType: "feature" as const,
-          alt: "AI automation tools dashboard showing various business processes being automated",
-          editable: false,
-        },
-      ]
+      // Load real blog content from the draft
+      let realBlogContent = []
 
-      setInternalLinks(mockInternalLinks)
-      setExternalLinks(mockExternalLinks)
-      setBlogContent(mockBlogContent)
+      if (draftData?.generatedContent?.blogContent) {
+        console.log('📝 Loading real blog content from draft...')
+        const content = draftData.generatedContent.blogContent
+
+        // Convert the structured content to blog blocks for preview
+        realBlogContent = [
+          {
+            id: "title-1",
+            type: "title" as const,
+            content: content.title || draftData.selectedH1 || "Blog Post Title",
+            editable: false,
+          },
+          {
+            id: "intro-1",
+            type: "introduction" as const,
+            content: content.introduction || "Introduction content will appear here...",
+            editable: true,
+            wordCount: content.introduction?.split(' ').length || 0,
+          },
+          {
+            id: "feature-img-1",
+            type: "image" as const,
+            imageType: "feature" as const,
+            alt: `${draftData.selectedKeyword} - Professional feature image`,
+            editable: false,
+          },
+          // Add sections
+          ...(content.sections || []).map((section: any, index: number) => [
+            {
+              id: `section-h2-${index}`,
+              type: "section" as const,
+              h2: section.h2 || `Section ${index + 1}`,
+              content: section.content || "Section content will appear here...",
+              editable: true,
+              wordCount: section.content?.split(' ').length || 0,
+            },
+            // Add in-blog images between sections
+            {
+              id: `section-img-${index}`,
+              type: "image" as const,
+              imageType: "in-blog" as const,
+              alt: `${draftData.selectedKeyword} - Section ${index + 1} image`,
+              editable: false,
+            }
+          ]).flat(),
+          {
+            id: "conclusion-1",
+            type: "conclusion" as const,
+            content: content.conclusion || "Conclusion content will appear here...",
+            editable: true,
+            wordCount: content.conclusion?.split(' ').length || 0,
+          },
+
+        ]
+
+        console.log(`✅ Loaded ${realBlogContent.length} content blocks for preview`)
+      } else {
+        console.log('⚠️ No generated content found, using placeholder content')
+        realBlogContent = [
+          {
+            id: "title-1",
+            type: "title" as const,
+            content: draftData?.selectedH1 || "Blog Post Title",
+            editable: false,
+          },
+          {
+            id: "intro-1",
+            type: "introduction" as const,
+            content: "Content is being generated... Please complete the content generation step first.",
+            editable: true,
+            wordCount: 0,
+          },
+          {
+            id: "feature-img-1",
+            type: "image" as const,
+            imageType: "feature" as const,
+            alt: "Feature image placeholder",
+            editable: false,
+          },
+        ]
+      }
+
+      // Use real links if available, otherwise use fallbacks
+      setInternalLinks(realInternalLinks.length > 0 ? realInternalLinks : fallbackInternalLinks)
+      setExternalLinks(realExternalLinks.length > 0 ? realExternalLinks : fallbackExternalLinks)
+      setBlogContent(realBlogContent)
+
     } catch (error) {
+      console.error('Error loading review data:', error)
       toast({
         title: "Error loading review data",
         description: "Failed to load blog content and links. Please try again.",
@@ -112,29 +208,82 @@ export default function ReviewPage() {
     }
   }
 
-  const checkWordPressConnection = async () => {
-    try {
-      await api.testWordPress()
-      setWordPressStatus("connected")
-    } catch (error) {
-      setWordPressStatus("disconnected")
-    }
-  }
+
 
   const handleDeploy = async () => {
     setDeploying(true)
+    setDeploymentSuccess(false)
+    setWordpressUrl(null)
+
     try {
-      await api.deployWordPress(draftId)
+      console.log('🚀 Deploying to WordPress...')
+      console.log(`📝 Draft ID: ${draftId}`)
+      console.log(`🏢 Publishing as: ${publishAsDraft ? 'Draft' : 'Published'}`)
+
+      // Show initial deployment message
       toast({
-        title: "Successfully deployed!",
-        description: `Blog post has been ${publishAsDraft ? "saved as draft" : "published"} to WordPress.`,
+        title: "Deployment started",
+        description: "Processing content and uploading images to WordPress...",
         variant: "default",
       })
-      router.push("/")
-    } catch (error) {
+
+      const result = await api.deployWordPress(draftId) as any
+      console.log('✅ WordPress deployment result:', result)
+
+      if (result?.success) {
+        // Set success state immediately
+        setDeploymentSuccess(true)
+        setWordpressUrl(result.editUrl)
+
+        toast({
+          title: "Successfully deployed!",
+          description: `Blog post has been created as draft in WordPress with all content and images.`,
+          variant: "default",
+        })
+
+        // Redirect to WordPress edit URL if available
+        if (result?.editUrl) {
+          console.log('🔗 Opening WordPress draft editor:', result.editUrl)
+
+          // Show success message with redirect info
+          setTimeout(() => {
+            toast({
+              title: "WordPress Draft Ready",
+              description: `Opening WordPress editor in new tab. You can now edit and publish your blog post.`,
+              variant: "default",
+            })
+
+            // Open WordPress draft in new tab
+            window.open(result.editUrl, '_blank', 'noopener,noreferrer')
+          }, 1500)
+
+        } else {
+          console.log('⚠️ No WordPress edit URL received')
+          toast({
+            title: "Deployment completed",
+            description: "Draft created in WordPress. Please check your WordPress admin panel.",
+            variant: "default",
+          })
+        }
+      } else {
+        throw new Error(result?.message || result?.error || 'Deployment failed')
+      }
+    } catch (error: any) {
+      console.error('❌ WordPress deployment failed:', error)
+
+      let errorMessage = "Failed to deploy to WordPress. Please check your connection and try again."
+
+      if (error.message?.includes('connection')) {
+        errorMessage = "WordPress connection failed. Please check your WordPress credentials in settings."
+      } else if (error.message?.includes('upload')) {
+        errorMessage = "Failed to upload images to WordPress. Please try again or check image URLs."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       toast({
         title: "Deployment failed",
-        description: "Failed to deploy to WordPress. Please check your connection and try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -176,9 +325,9 @@ export default function ReviewPage() {
             <p className="text-gray-600">Review your generated links and deploy to WordPress</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Links Section */}
-            <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Links Section - Takes 2 columns */}
+            <div className="xl:col-span-2 space-y-6">
               {/* Internal Links */}
               <Card>
                 <CardHeader>
@@ -196,12 +345,20 @@ export default function ReviewPage() {
                       {internalLinks.map((link, index) => (
                         <div key={index} className="border rounded-lg p-3">
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-sm">{link.anchorText}</h4>
+                            <a
+                              href={link.targetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                            >
+                              {link.anchorText}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
                             <Badge variant="outline" className={getRelevanceColor(link.relevance)}>
                               {link.relevance}%
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-600 mb-1">{link.targetUrl}</p>
+                          <p className="text-xs text-gray-600 mb-1 font-mono">{link.targetUrl}</p>
                           <p className="text-xs text-gray-500">{link.context}</p>
                         </div>
                       ))}
@@ -227,13 +384,26 @@ export default function ReviewPage() {
                       {externalLinks.map((link, index) => (
                         <div key={index} className="border rounded-lg p-3">
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-sm">{link.anchorText}</h4>
+                            <a
+                              href={link.targetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                            >
+                              {link.anchorText}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
                             <Badge variant="outline" className={getRelevanceColor(link.relevance)}>
                               {link.relevance}%
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-600 mb-1">{link.targetDomain}</p>
-                          <p className="text-xs text-gray-500">{link.context}</p>
+                          <p className="text-xs text-gray-600 mb-1 font-mono">{link.targetUrl}</p>
+                          <p className="text-xs text-gray-500">
+                            <span className="bg-gray-100 text-gray-700 px-1 py-0.5 rounded text-[10px] mr-1">
+                              {link.targetDomain}
+                            </span>
+                            {link.context}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -241,7 +411,10 @@ export default function ReviewPage() {
                 </CardContent>
               </Card>
 
-              {/* WordPress Deployment */}
+            </div>
+
+            {/* WordPress Deployment Section - Takes 1 column */}
+            <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -252,22 +425,8 @@ export default function ReviewPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2">
-                    {wordPressStatus === "connected" ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-600">WordPress Connected</span>
-                      </>
-                    ) : wordPressStatus === "disconnected" ? (
-                      <>
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-sm text-red-600">WordPress Disconnected</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-4 w-4 border-2 border-gray-300 border-t-[#0066cc] rounded-full animate-spin" />
-                        <span className="text-sm text-gray-600">Checking connection...</span>
-                      </>
-                    )}
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-600">WordPress Ready</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -277,105 +436,65 @@ export default function ReviewPage() {
                     <Switch id="publish-draft" checked={publishAsDraft} onCheckedChange={setPublishAsDraft} />
                   </div>
 
-                  <Button
-                    onClick={handleDeploy}
-                    disabled={deploying || wordPressStatus !== "connected"}
-                    className="w-full bg-[#0066cc] hover:bg-blue-700"
-                  >
-                    {deploying ? "Deploying..." : `Deploy to WordPress ${publishAsDraft ? "(Draft)" : "(Published)"}`}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Preview Section */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Eye className="h-5 w-5 text-[#0066cc]" />
-                      Blog Preview
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
+                  {!deploymentSuccess ? (
+                    <div className="space-y-3">
                       <Button
-                        variant={previewMode === "desktop" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPreviewMode("desktop")}
+                        onClick={handleDeploy}
+                        disabled={deploying}
+                        className="w-full bg-[#0066cc] hover:bg-blue-700 disabled:opacity-50"
                       >
-                        <Monitor className="h-4 w-4" />
+                        <Upload className="h-4 w-4 mr-2" />
+                        {deploying ? "Deploying..." : `Deploy to WordPress ${publishAsDraft ? "(Draft)" : "(Published)"}`}
                       </Button>
-                      <Button
-                        variant={previewMode === "mobile" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPreviewMode("mobile")}
-                      >
-                        <Smartphone className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <CardDescription>Preview how your blog post will appear on WordPress</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className={`border rounded-lg overflow-hidden ${previewMode === "mobile" ? "max-w-sm mx-auto" : ""}`}
-                  >
-                    <div className="bg-white p-6 space-y-6">
-                      {blogContent.map((block, index) => (
-                        <div key={block.id}>
-                          {block.type === "introduction" && (
-                            <div>
-                              <h1 className="text-2xl font-bold text-gray-900 mb-4">
-                                {/* This would be the H1 title from meta */}
-                                Blog Post Title
-                              </h1>
-                              <div className="prose prose-sm max-w-none text-gray-700">{block.content}</div>
-                            </div>
-                          )}
 
-                          {block.type === "image" && block.imageType === "feature" && (
-                            <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <div className="text-center">
-                                <Eye className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">Feature Image</p>
-                                {block.alt && <p className="text-xs text-gray-400 mt-1">{block.alt}</p>}
-                              </div>
-                            </div>
-                          )}
-
-                          {block.type === "section" && (
-                            <div>
-                              <h2 className="text-xl font-semibold text-gray-900 mb-3">{block.h2}</h2>
-                              <div className="prose prose-sm max-w-none text-gray-700">{block.content}</div>
-                            </div>
-                          )}
-
-                          {block.type === "image" && block.imageType === "in-blog" && (
-                            <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center my-4">
-                              <div className="text-center">
-                                <Eye className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-                                <p className="text-xs text-gray-500">In-blog Image</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {block.type === "conclusion" && (
-                            <div>
-                              <h2 className="text-xl font-semibold text-gray-900 mb-3">Conclusion</h2>
-                              <div className="prose prose-sm max-w-none text-gray-700">{block.content}</div>
-                            </div>
-                          )}
-
-                          {block.type === "references" && (
-                            <div>
-                              <h2 className="text-xl font-semibold text-gray-900 mb-3">References</h2>
-                              <div className="prose prose-sm max-w-none text-gray-700">{block.content}</div>
-                            </div>
-                          )}
+                      {deploying && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                            <span className="text-blue-800 text-sm font-medium">
+                              Deploying to WordPress...
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 text-center space-y-1">
+                            <div>✓ Processing content blocks</div>
+                            <div>✓ Uploading images to WordPress</div>
+                            <div>✓ Creating draft with SEO metadata</div>
+                            <div className="animate-pulse">⏳ Finalizing deployment...</div>
+                          </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                        <span className="text-green-800 font-medium">Successfully deployed to WordPress!</span>
+                      </div>
+
+                      {wordpressUrl && (
+                        <Button
+                          onClick={() => window.open(wordpressUrl, '_blank')}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open in WordPress Editor
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={() => {
+                          setDeploymentSuccess(false)
+                          setWordpressUrl(null)
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Deploy Another Version
+                      </Button>
+                    </div>
+                  )}
+
+
                 </CardContent>
               </Card>
             </div>

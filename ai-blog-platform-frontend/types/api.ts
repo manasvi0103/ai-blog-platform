@@ -106,6 +106,11 @@ export interface BlogBlock {
   alt?: string
   editable: boolean
   wordCount?: number
+  citations?: Array<{
+    url: string
+    title: string
+    description?: string
+  }>
 }
 
 export interface InternalLink {

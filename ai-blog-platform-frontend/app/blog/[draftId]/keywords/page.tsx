@@ -14,6 +14,25 @@ import type { Keyword } from "@/types/api"
 import { StepperHeader } from "@/components/stepper-header"
 import { api } from "@/lib/api"
 
+// Add CSS for badge styles
+const badgeStyles = `
+  .badge-ai {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+  .badge-manual {
+    background-color: #10b981;
+    color: white;
+    border-color: #10b981;
+  }
+  .badge-fallback {
+    background-color: #f59e0b;
+    color: white;
+    border-color: #f59e0b;
+  }
+`
+
 export default function KeywordsPage() {
   const [keywords, setKeywords] = useState<Keyword[]>([])
   const [selectedKeyword, setSelectedKeyword] = useState<string>("")
@@ -89,7 +108,7 @@ export default function KeywordsPage() {
     }
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedKeyword) {
       toast({
         title: "Please select a keyword",
@@ -99,14 +118,40 @@ export default function KeywordsPage() {
       return
     }
 
-    // Save selected keyword
-    localStorage.setItem(`keyword_${draftId}`, selectedKeyword)
+    try {
+      // Find the selected keyword data to save word count info
+      const selectedKeywordData = keywords.find(k => k.focusKeyword === selectedKeyword)
 
-    toast({
-      title: "Keyword selected",
-      description: "Moving to SEO meta generation.",
-    })
-    router.push(`/blog/${draftId}/meta`)
+      // Save selected keyword to localStorage for immediate use
+      localStorage.setItem(`keyword_${draftId}`, selectedKeyword)
+
+      // IMPORTANT: Save the complete keyword data including word count
+      if (selectedKeywordData) {
+        localStorage.setItem(`keywordData_${draftId}`, JSON.stringify(selectedKeywordData))
+        console.log(`📊 Saved keyword data with word count: ${selectedKeywordData.wordCount}`)
+      }
+
+      console.log(`🎯 Saving selected keyword to backend: "${selectedKeyword}"`)
+
+      // CRITICAL: Save the selected keyword to the backend draft
+      await api.selectKeywordAnalyze(draftId, selectedKeyword)
+
+      console.log(`✅ Successfully saved keyword "${selectedKeyword}" to draft ${draftId}`)
+
+      toast({
+        title: "Keyword selected",
+        description: `"${selectedKeyword}" saved successfully. Target: ${selectedKeywordData?.wordCount || '2500'} words.`,
+      })
+
+      router.push(`/blog/${draftId}/meta`)
+    } catch (error) {
+      console.error('Error saving keyword:', error)
+      toast({
+        title: "Error saving keyword",
+        description: "Failed to save the selected keyword. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   if (loading) {
@@ -129,6 +174,7 @@ export default function KeywordsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <style jsx>{badgeStyles}</style>
       <StepperHeader currentStep={2} draftId={draftId} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -165,10 +211,13 @@ export default function KeywordsPage() {
                                 {keyword.articleFormat}
                               </Badge>
                               <Badge
-                                variant={keyword.source === "ai" ? "default" : "secondary"}
-                                className={keyword.source === "ai" ? "badge-ai" : "badge-manual"}
+                                variant={keyword.source === "ai" || keyword.source === "ai-trends" ? "default" :
+                                        keyword.source === "fallback" ? "outline" : "secondary"}
+                                className={keyword.source === "ai" || keyword.source === "ai-trends" ? "badge-ai" :
+                                          keyword.source === "fallback" ? "badge-fallback" : "badge-manual"}
                               >
-                                {keyword.source === "ai" ? "AI Generated" : "Manual"}
+                                {keyword.source === "ai" || keyword.source === "ai-trends" ? "AI Generated" :
+                                 keyword.source === "fallback" ? "Fallback" : "Manual"}
                               </Badge>
                             </div>
                           </div>
