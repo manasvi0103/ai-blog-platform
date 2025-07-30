@@ -6,15 +6,26 @@ const router = express.Router();
 // POST generate AI image
 router.post('/generate', async (req, res) => {
   try {
-    const { prompt, style = 'realistic' } = req.body;
-    
+    const { prompt, style = 'realistic', imageType = 'featured', draftId, blockId } = req.body;
+
     if (!prompt) {
       return res.status(400).json({ message: 'Prompt is required' });
     }
-    
-    const result = await imageService.generateImageWithAI(prompt, style);
+
+    console.log(`🎨 Image generation request: "${prompt}" (style: ${style}, type: ${imageType})`);
+
+    const result = await imageService.generateImageWithAI(prompt, style, imageType);
+
+    // If this is for a specific content block, we could save the association
+    if (draftId && blockId) {
+      console.log(`📎 Generated image for draft ${draftId}, block ${blockId}`);
+      result.draftId = draftId;
+      result.blockId = blockId;
+    }
+
     res.json(result);
   } catch (error) {
+    console.error('Image generation error:', error);
     res.status(500).json({ message: error.message });
   }
 });

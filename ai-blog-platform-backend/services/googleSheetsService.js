@@ -76,7 +76,7 @@ class GoogleSheetsService {
           })),
         serviceOverview: row.get('Service Overview') || row.get('service_overview'),
         aboutCompany: row.get('About The Company') || row.get('about_company'),
-        tone: (row.get('Tone') || row.get('tone') || 'professional').toLowerCase(),
+        tone: this.mapToneToEnum(row.get('Tone') || row.get('tone') || 'professional'),
         brandVoice: row.get('Brand Voice') || row.get('brand_voice'),
         targetAudience: (row.get('Target Audience') || row.get('target_audience') || '')
           .split(',')
@@ -121,6 +121,28 @@ class GoogleSheetsService {
       console.error('Keywords fetch error:', error);
       throw error;
     }
+  }
+
+  mapToneToEnum(toneString) {
+    if (!toneString) return 'professional';
+
+    const tone = toneString.toLowerCase();
+
+    // Map complex tone descriptions to simple enum values
+    if (tone.includes('professional') || tone.includes('authoritative')) {
+      return 'professional';
+    } else if (tone.includes('technical') || tone.includes('practical')) {
+      return 'technical';
+    } else if (tone.includes('friendly') || tone.includes('supportive')) {
+      return 'friendly';
+    } else if (tone.includes('casual')) {
+      return 'casual';
+    } else if (tone.includes('authoritative')) {
+      return 'authoritative';
+    }
+
+    // Default fallback
+    return 'professional';
   }
 }
 

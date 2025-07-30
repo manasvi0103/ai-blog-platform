@@ -1,4 +1,4 @@
-/ controllers/blogController.js
+// controllers/blogController.js
 const BlogData = require('../models/BlogData');
 const ContentBlock = require('../models/ContentBlock');
 const Draft = require('../models/Draft');
@@ -415,54 +415,280 @@ class BlogController {
 
   // Publish draft to WordPress
   async publishToWordPress(req, res) {
-    try {
-      const { draftId } = req.params;
-      
-      const draft = await Draft.findById(draftId).populate({
-        path: 'blogId',
-        populate: { path: 'companyId' }
+  try {
+    const { draftId } = req.params;
+    
+    console.log(`🚀 Publishing draft ${draftId} to WordPress`);
+    
+    // Get draft with populated company info
+    const draft = await Draft.findById(draftId).populate({
+      path: 'blogId',
+      populate: { path: 'companyId' }
+    });
+
+    if (!draft) {
+      console.error(`❌ Draft ${draftId} not found`);
+      return res.status(404).json({ 
+        success: false,
+        message: 'Draft not found' 
       });
+    }
 
-      if (!draft) {
-        return res.status(404).json({ message: 'Draft not found' });
-      }
+    // FIXED: Validate required fields
+    if (!draft.title || !draft.content) {
+      console.error(`❌ Draft ${draftId} missing required fields`);
+      return res.status(400).json({
+        success: false,
+        message: 'Draft must have title and content to publish to WordPress'
+      });
+    }
 
-      // Prepare WordPress data
-      const wordpressData = {
-        title: draft.title,
-        content: draft.content,
-        metaTitle: draft.metaTitle,
-        metaDescription: draft.metaDescription,
-        featuredImage: draft.featuredImage
-      };
+    // FIXED: Validate company info
+    if (!draft.blogId?.companyId?._id) {
+      console.error(`❌ Draft ${draftId} missing company information`);
+      return res.status(400).json({
+        success: false,
+        message: 'Draft must be associated with a company to publish to WordPress'
+      });
+    }
 
-      // Publish to WordPress
-      const result = await wordpressService.createDraft(wordpressData);
+    const companyId = draft.blogId.companyId._id;
+    console.log(`📋 Publishing for company: ${draft.blogId.companyId.name} (${companyId})`);
 
-      if (result.success) {
+    // Prepare WordPress data with fallbacks
+    const wordpressData = {
+      title: draft.title,
+      content: draft.content,
+      metaTitle: draft.metaTitle || draft.title,
+      metaDescription: draft.metaDescription || draft.excerpt || '',
+      focusKeyword: draft.selectedKeyword || '',
+      featuredImage: draft.featuredImage || null,
+      // Add any other fields from your draft
+      excerpt: draft.excerpt || '',
+      categories: draft.categories || [],
+      tags: draft.tags || []
+    };
+
+    console.log(`📝 WordPress data prepared: ${wordpressData.title}`);
+
+    // FIXED: Pass companyId to WordPress service
+    const result = await wordpressService.createDraft(wordpressData, companyId);
+
+    // FIXED: Properly check success before updating database
+    if (result.success) {
+      console.log(`✅ WordPress draft created: ${result.wordpressId}`);
+      
+      try {
         // Update draft with WordPress info
-        draft.wordpressStatus = 'draft';
-        draft.wordpressId = result.wordpressId;
-        await draft.save();
+        await Draft.findByIdAndUpdate(draftId, {
+          wordpressStatus: 'draft',
+          wordpressId: result.wordpressId,
+          wordpressEditUrl: result.editUrl,
+          wordpressPreviewUrl: result.previewUrl,
+          publishedToWordPressAt: new Date()
+        });
 
-        // Update blog status
-        await BlogData.findByIdAndUpdate(draft.blogId._id, { status: 'published' });
+        console.log(`✅ Draft ${draftId} updated with WordPress info`);
+
+        // FIXED: Only update blog status if everything succeeded
+        if (draft.blogId?._id) {
+          await BlogData.findByIdAndUpdate(draft.blogId._id, { 
+            status: 'published',
+            lastPublishedAt: new Date()
+          });
+          console.log(`✅ Blog ${draft.blogId._id} status updated to published`);
+        }
 
         res.json({
+          success: true,
           message: 'Successfully published to WordPress',
+          wordpressId: result.wordpressId,
+          editUrl: result.editUrl,
+          previewUrl: result.previewUrl,
+          draftId: draftId
+        });
+
+      } catch (dbError) {
+        console.error(`❌ Database update failed after WordPress success:`, dbError.message);
+        
+        // WordPress succeeded but database update failed
+        // Don't delete from WordPress, just inform user
+        res.status(500).json({
+          success: false,
+          message: 'Published to WordPress but failed to update local database',
+          error: dbError.message,
           wordpressId: result.wordpressId,
           editUrl: result.editUrl
         });
-      } else {
-        res.status(500).json({
-          message: 'Failed to publish to WordPress',
-          error: result.error
+      }
+
+    } else {
+      // FIXED: WordPress creation failed - don't update database
+      console.error(`❌ WordPress publishing failed:`, result.error);
+      
+      res.status(400).json({
+        success: false,
+        message: 'Failed to publish to WordPress',
+        error: result.error,
+        details: result.details || {}
+      });
+    }
+
+  } catch (error) {
+    console.error('🚨 WordPress publishing crashed:', error.message);
+    console.error('Stack trace:', error.stack);
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to publish to WordPress',
+      error: error.message
+    });
+  }
+
+  // BONUS: Add a validation helper function
+  validateDraftForWordPress(draft) {
+    const errors = [];
+
+    if (!draft.title || draft.title.trim().length === 0) {
+      errors.push('Title is required');
+    }
+
+    if (!draft.content || draft.content.trim().length === 0) {
+      errors.push('Content is required');
+    }
+
+    if (draft.title && draft.title.length > 200) {
+      errors.push('Title must be less than 200 characters');
+    }
+
+    if (!draft.blogId?.companyId?._id) {
+      errors.push('Draft must be associated with a company');
+    }
+
+    return errors;
+  }
+
+  // BONUS: Enhanced version with validation
+  async publishToWordPressEnhanced(req, res) {
+  try {
+    const { draftId } = req.params;
+    
+    console.log(`🚀 Publishing draft ${draftId} to WordPress (Enhanced)`);
+    
+    const draft = await Draft.findById(draftId).populate({
+      path: 'blogId',
+      populate: { path: 'companyId' }
+    });
+
+    if (!draft) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Draft not found' 
+      });
+    }
+
+    // Validate draft before attempting WordPress publish
+    const validationErrors = validateDraftForWordPress(draft);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Draft validation failed',
+        errors: validationErrors
+      });
+    }
+
+    // Check if already published to WordPress
+    if (draft.wordpressId) {
+      console.warn(`⚠️ Draft ${draftId} already has WordPress ID: ${draft.wordpressId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Draft already published to WordPress',
+        wordpressId: draft.wordpressId,
+        editUrl: draft.wordpressEditUrl
+      });
+    }
+
+    const companyId = draft.blogId.companyId._id;
+    
+    // Test WordPress connection first
+    console.log(`🔗 Testing WordPress connection for company ${companyId}`);
+    const connectionTest = await wordpressService.testConnection(companyId);
+    
+    if (!connectionTest.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'WordPress connection failed',
+        error: connectionTest.error,
+        details: connectionTest.details
+      });
+    }
+
+    // Prepare and publish to WordPress
+    const wordpressData = {
+      title: draft.title,
+      content: draft.content,
+      metaTitle: draft.metaTitle || draft.title,
+      metaDescription: draft.metaDescription || draft.excerpt || '',
+      focusKeyword: draft.selectedKeyword || '',
+      featuredImage: draft.featuredImage || null,
+      excerpt: draft.excerpt || '',
+      categories: draft.categories || [],
+      tags: draft.tags || []
+    };
+
+    const result = await wordpressService.createDraft(wordpressData, companyId);
+
+    if (result.success) {
+      // Update draft atomically
+      const updatedDraft = await Draft.findByIdAndUpdate(
+        draftId,
+        {
+          wordpressStatus: 'draft',
+          wordpressId: result.wordpressId,
+          wordpressEditUrl: result.editUrl,
+          wordpressPreviewUrl: result.previewUrl,
+          publishedToWordPressAt: new Date()
+        },
+        { new: true }
+      );
+
+      // Update blog status
+      if (draft.blogId?._id) {
+        await BlogData.findByIdAndUpdate(draft.blogId._id, { 
+          status: 'published',
+          lastPublishedAt: new Date()
         });
       }
-    } catch (error) {
-      console.error('WordPress publishing error:', error);
-      res.status(500).json({ message: 'Failed to publish to WordPress' });
+
+      res.json({
+        success: true,
+        message: 'Successfully published to WordPress',
+        data: {
+          draftId: updatedDraft._id,
+          wordpressId: result.wordpressId,
+          editUrl: result.editUrl,
+          previewUrl: result.previewUrl,
+          title: updatedDraft.title,
+          publishedAt: updatedDraft.publishedToWordPressAt
+        }
+      });
+
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to publish to WordPress',
+        error: result.error,
+        details: result.details
+      });
     }
+
+  } catch (error) {
+    console.error('🚨 WordPress publishing crashed:', error.message);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error during WordPress publishing',
+      error: error.message
+    });
   }
 
   // Get blog analytics and insights

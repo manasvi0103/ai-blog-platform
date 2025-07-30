@@ -18,6 +18,8 @@ class TrendService {
           return await this.fetchNewsDataIO(keyword, limit);
         case 'rapidapi':
           return await this.fetchRapidAPIData(keyword, limit);
+        case 'all':
+          return await this.fetchFromAllSources(keyword, limit);
         default:
           throw new Error(`Unsupported trend source: ${source}`);
       }
@@ -25,6 +27,72 @@ class TrendService {
       console.error(`Error fetching ${source} data:`, error.message);
       return [];
     }
+  }
+
+  // New method to fetch from all sources and combine results
+  async fetchFromAllSources(keyword, limit = 10) {
+    console.log(`🔍 Fetching trends for "${keyword}" from ALL sources...`);
+
+    const results = [];
+    const sources = ['gnews', 'newsdata', 'rapidapi'];
+    const limitPerSource = Math.ceil(limit / sources.length);
+
+    // Fetch from all sources in parallel
+    const promises = sources.map(async (source) => {
+      try {
+        console.log(`📰 Fetching from ${source}...`);
+        const data = await this.fetchTrendData(keyword, source, limitPerSource);
+        console.log(`✅ ${source}: ${data.length} articles`);
+        return data;
+      } catch (error) {
+        console.warn(`⚠️ ${source} failed:`, error.message);
+        return [];
+      }
+    });
+
+    const allResults = await Promise.all(promises);
+
+    // Combine and deduplicate results
+    const combined = allResults.flat();
+    const unique = this.deduplicateArticles(combined);
+
+    // Sort by relevance and recency
+    const sorted = unique.sort((a, b) => {
+      const scoreA = (a.relevanceScore || 50) + (this.getRecencyScore(a.publishedAt) || 0);
+      const scoreB = (b.relevanceScore || 50) + (this.getRecencyScore(b.publishedAt) || 0);
+      return scoreB - scoreA;
+    });
+
+    console.log(`🎯 Combined results: ${sorted.length} unique articles from ${sources.length} sources`);
+    return sorted.slice(0, limit);
+  }
+
+  // Helper method to remove duplicate articles
+  deduplicateArticles(articles) {
+    const seen = new Set();
+    return articles.filter(article => {
+      const key = article.title.toLowerCase().trim();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  // Helper method to calculate recency score
+  getRecencyScore(publishedAt) {
+    if (!publishedAt) return 0;
+
+    const now = new Date();
+    const published = new Date(publishedAt);
+    const daysDiff = (now - published) / (1000 * 60 * 60 * 24);
+
+    // More recent articles get higher scores
+    if (daysDiff <= 1) return 20;
+    if (daysDiff <= 7) return 15;
+    if (daysDiff <= 30) return 10;
+    return 5;
   }
 
   async fetchGNewsData(keyword, limit) {

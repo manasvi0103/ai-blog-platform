@@ -1,8 +1,39 @@
 // routes/contentRoutes.js
 const express = require('express');
 const ContentBlock = require('../models/ContentBlock');
-const { generateContent } = require('../services/geminiService');
+const geminiService = require('../services/geminiService');
 const router = express.Router();
+
+// Test endpoint for Gemini service
+router.post('/test-gemini', async (req, res) => {
+  try {
+    const { prompt, companyContext } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ message: 'Prompt is required' });
+    }
+
+    console.log('🧪 Testing Gemini service with prompt:', prompt);
+
+    // Test Gemini service directly
+    const result = await geminiService.generateContent(prompt, companyContext || {});
+
+    res.json({
+      success: true,
+      content: result.content,
+      wordCount: result.wordCount,
+      keywords: result.keywords,
+      service: 'Gemini AI'
+    });
+  } catch (error) {
+    console.error('Gemini test error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      service: 'Gemini AI'
+    });
+  }
+});
 
 // GET content blocks for a blog
 router.get('/blog/:blogId', async (req, res) => {
@@ -21,7 +52,7 @@ router.post('/generate', async (req, res) => {
     const { blogId, blockType, prompt, companyContext } = req.body;
     
     // Generate content using Gemini
-    const generatedContent = await generateContent(prompt, companyContext);
+    const generatedContent = await geminiService.generateContent(prompt, companyContext);
     
     // Get the next order number
     const lastBlock = await ContentBlock.findOne({ blogId })

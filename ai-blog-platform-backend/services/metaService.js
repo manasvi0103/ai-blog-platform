@@ -4,11 +4,15 @@ const trendService = require('./trendService');
 class MetaService {
   async generateMetaData(keyword, companyInfo) {
     try {
+      console.log(`🎯 META SERVICE: Generating meta for keyword: "${keyword.focusKeyword}"`);
+      console.log(`   Company: ${companyInfo.companyName}`);
+      console.log(`   Article Format: ${keyword.articleFormat}`);
+
       // Get trending topics for better meta generation
       let trendingContext = '';
       try {
-        console.log('🔍 Fetching trending solar topics for meta generation...');
-        const trendData = await trendService.fetchTrendData(keyword.focusKeyword, 'newsdata', 3);
+        console.log('🔍 Fetching trending topics from ALL sources for meta generation...');
+        const trendData = await trendService.fetchTrendData(keyword.focusKeyword, 'all', 5);
         if (trendData && trendData.length > 0) {
           const topics = trendData.map(item => item.title).slice(0, 3).join(', ');
           trendingContext = `\n\nCurrent trending topics related to "${keyword.focusKeyword}": ${topics}`;
