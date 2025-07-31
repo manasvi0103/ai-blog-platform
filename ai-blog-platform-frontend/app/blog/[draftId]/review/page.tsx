@@ -211,6 +211,11 @@ export default function ReviewPage() {
 
 
   const handleDeploy = async () => {
+    // Redirect to deployment loading page
+    router.push(`/blog/${draftId}/deploying`)
+  }
+
+  const handleDeployOld = async () => {
     setDeploying(true)
     setDeploymentSuccess(false)
     setWordpressUrl(null)

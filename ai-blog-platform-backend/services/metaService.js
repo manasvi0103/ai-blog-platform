@@ -33,11 +33,11 @@ Company Context:
 - Objective: ${keyword.objective}
 ${trendingContext}
 
-Generate the following in JSON format:
+Generate the following in JSON format with STRICT SEO requirements:
 {
-  "h1": "Main heading for the blog post (60-70 characters, include focus keyword)",
-  "metaTitle": "SEO title for search engines (50-60 characters, include focus keyword and company name)",
-  "metaDescription": "Meta description for search results (150-160 characters, compelling and include focus keyword)"
+  "h1": "Main heading for the blog post (60-70 characters, MUST include focus keyword '${keyword.focusKeyword}' prominently)",
+  "metaTitle": "SEO title for search engines (50-60 characters, MUST include focus keyword '${keyword.focusKeyword}' and company name)",
+  "metaDescription": "Meta description for search results (150-160 characters, MUST include focus keyword '${keyword.focusKeyword}' within first 120 characters)"
 }
 
 Requirements:

@@ -1262,7 +1262,10 @@ router.post('/deploy-wordpress', async (req, res) => {
         console.log(`🔗 Adding ${draft.internalLinks.length} internal links`);
         assembledContent += '\n\n<h3>Related Articles</h3>\n<ul>\n';
         draft.internalLinks.forEach(link => {
-          assembledContent += `<li><a href="${link.url}" target="_blank">${link.title}</a> - ${link.description || ''}</li>\n`;
+          const linkUrl = link.targetUrl || link.url || '#';
+          const linkText = link.anchorText || link.title || 'Related Article';
+          const linkDescription = link.context || link.description || '';
+          assembledContent += `<li><a href="${linkUrl}" target="_blank">${linkText}</a>${linkDescription ? ' - ' + linkDescription : ''}</li>\n`;
         });
         assembledContent += '</ul>\n';
       }
@@ -1272,7 +1275,10 @@ router.post('/deploy-wordpress', async (req, res) => {
         console.log(`🌐 Adding ${draft.externalLinks.length} external links`);
         assembledContent += '\n\n<h3>Additional Resources</h3>\n<ul>\n';
         draft.externalLinks.forEach(link => {
-          assembledContent += `<li><a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.title}</a> - ${link.description || ''}</li>\n`;
+          const linkUrl = link.targetUrl || link.url || '#';
+          const linkText = link.anchorText || link.title || 'External Resource';
+          const linkDescription = link.context || link.description || '';
+          assembledContent += `<li><a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkText}</a>${linkDescription ? ' - ' + linkDescription : ''}</li>\n`;
         });
         assembledContent += '</ul>\n';
       }

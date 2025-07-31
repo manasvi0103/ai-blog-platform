@@ -143,7 +143,7 @@ export default function KeywordsPage() {
         description: `"${selectedKeyword}" saved successfully. Target: ${selectedKeywordData?.wordCount || '2500'} words.`,
       })
 
-      router.push(`/blog/${draftId}/meta`)
+      router.push(`/blog/${draftId}/generating-meta`)
     } catch (error) {
       console.error('Error saving keyword:', error)
       toast({

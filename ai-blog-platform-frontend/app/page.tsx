@@ -54,7 +54,7 @@ export default function HomePage() {
     try {
       const response = await api.startBlog(selectedCompany.companyName)
       localStorage.setItem("currentDraftId", response.draftId)
-      router.push(`/blog/${response.draftId}/keywords`)
+      router.push(`/blog/${response.draftId}/generating-keywords`)
     } catch (error) {
       toast({
         title: "Error starting blog",
@@ -115,8 +115,14 @@ export default function HomePage() {
     }
   }
 
-  const getStepName = (step: number) => {
+  const getStepName = (step: number, draft: any) => {
     const steps = ["Keywords", "Meta Generation", "Meta Selection", "Content Review", "Ready to Publish"]
+
+    // If step 1 and has selected keyword, show "Draft Created"
+    if (step === 1 && draft.selectedKeyword) {
+      return "Draft Created"
+    }
+
     return steps[step - 1] || "Unknown"
   }
 
@@ -258,7 +264,7 @@ export default function HomePage() {
 
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">
-                          Step {draft.currentStep}: {getStepName(draft.currentStep)}
+                          Step {draft.currentStep}: {getStepName(draft.currentStep, draft)}
                         </Badge>
                       </div>
 

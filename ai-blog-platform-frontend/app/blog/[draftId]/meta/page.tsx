@@ -238,7 +238,7 @@ export default function MetaPage() {
         description: "SEO meta information has been saved successfully.",
       })
 
-      router.push(`/blog/${draftId}/editor`)
+      router.push(`/blog/${draftId}/generating-content`)
     } catch (error) {
       toast({
         title: "Error saving meta",

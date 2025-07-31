@@ -252,7 +252,7 @@ class GeminiService {
   async generateStructuredBlogContent(draftData, trendData = []) {
     const { selectedKeyword, selectedH1, selectedMetaTitle, selectedMetaDescription, companyName, targetWordCount = 2500, strictKeywordFocus, generateAllBlocks } = draftData;
 
-    console.log(`🎯 GENERATING ALL CONTENT FOR KEYWORD: "${selectedKeyword}"`);
+    console.log(`🎯 GENERATING SEO-OPTIMIZED CONTENT FOR KEYWORD: "${selectedKeyword}"`);
     console.log(`📝 SELECTED H1: ${selectedH1}`);
     console.log(`📝 SELECTED Meta Title: ${selectedMetaTitle}`);
     console.log(`📝 SELECTED Meta Description: ${selectedMetaDescription}`);
@@ -300,7 +300,7 @@ WRITING GUIDELINES - STRICT "${selectedKeyword}" FOCUS
 - EXACT Title: ${selectedH1}
 - EXACT Meta Title: ${selectedMetaTitle}
 - EXACT Meta Description: ${selectedMetaDescription}
-- PRIMARY KEYWORD (use 15-20 times): ${selectedKeyword}
+- PRIMARY KEYWORD (use 20-25 times throughout content): ${selectedKeyword}
 - Structure: H1 + 5x H2 sections about "${selectedKeyword}" (including a conclusion)
 - TARGET TOTAL WORD COUNT: ${targetWordCount} words
 - Each section must be 2–4 paragraphs specifically about "${selectedKeyword}"
@@ -353,7 +353,7 @@ COMPANY CONTEXT FOR ${companyName}:
 Generate a complete blog article about "${selectedKeyword}" with the following structure as JSON:
 {
   "title": "${selectedH1}",
-  "introduction": "First paragraph about ${selectedKeyword} with compelling insight/stat (${introWords} words) - MUST mention ${selectedKeyword} 3-4 times",
+  "introduction": "First paragraph MUST START with '${selectedKeyword}' as the very first words. Include compelling insight/stat about ${selectedKeyword} (${introWords} words) - MUST mention ${selectedKeyword} 3-4 times total",
   "sections": [
     {
       "h2": "What is ${selectedKeyword}? [or similar ${selectedKeyword} heading]",

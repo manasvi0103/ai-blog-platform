@@ -427,10 +427,14 @@ class WordPressService {
 
       console.log(`📄 Title: ${draftData.title}`);
 
+      // Generate SEO-friendly slug from focus keyword
+      const seoSlug = this.generateSEOSlug(draftData.focusKeyword || draftData.title);
+
       const postData = {
         title: draftData.title,
         content: draftData.content,
         status: 'draft',
+        slug: seoSlug,
         excerpt: draftData.excerpt || this.generateExcerpt(draftData.content),
         meta: {
           _yoast_wpseo_title: draftData.metaTitle || draftData.title,
@@ -560,15 +564,27 @@ class WordPressService {
   // Helper: Generate excerpt
   generateExcerpt(content, maxLength = 160) {
     if (!content) return '';
-    
+
     const textContent = content.replace(/<[^>]*>/g, '').trim();
-    
+
     if (textContent.length <= maxLength) return textContent;
-    
+
     const truncated = textContent.substring(0, maxLength);
     const lastSpace = truncated.lastIndexOf(' ');
-    
+
     return (lastSpace > maxLength * 0.8 ? truncated.substring(0, lastSpace) : truncated) + '...';
+  }
+
+  generateSEOSlug(text) {
+    if (!text) return 'blog-post';
+
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+      .substring(0, 50); // Limit length for SEO
   }
 
   // FIXED: Image upload with proper error handling
