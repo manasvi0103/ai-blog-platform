@@ -157,6 +157,34 @@ export default function DeployingPage() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Deployment Successful!</h1>
               <p className="text-gray-600">Your blog post has been successfully deployed to WordPress as a draft.</p>
+
+              {/* SEO Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">📝 SEO Setup Required</h3>
+                <p className="text-xs text-blue-800 mb-3">
+                  Please set up SEO meta fields in WordPress admin for optimal search engine visibility:
+                </p>
+                <div className="text-left space-y-2">
+                  <div className="text-xs">
+                    <span className="font-medium text-blue-900">Meta Title:</span>
+                    <div className="bg-white p-2 rounded border text-gray-700 mt-1 font-mono text-xs">
+                      {draft?.selectedMetaTitle || draft?.metaTitle || 'Set in WordPress admin'}
+                    </div>
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-medium text-blue-900">Meta Description:</span>
+                    <div className="bg-white p-2 rounded border text-gray-700 mt-1 font-mono text-xs">
+                      {draft?.selectedMetaDescription || draft?.metaDescription || 'Set in WordPress admin'}
+                    </div>
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-medium text-blue-900">Focus Keyword:</span>
+                    <div className="bg-white p-2 rounded border text-gray-700 mt-1 font-mono text-xs">
+                      {draft?.selectedKeyword || 'Set in WordPress admin'}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}

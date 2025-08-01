@@ -20,26 +20,13 @@ export default function GeneratingContentPage() {
   ]
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTask((prev) => {
-        const next = prev + 1
-        if (next < tasks.length) {
-          setCompletedTasks((completed) => [...completed, prev])
-          return next
-        } else {
-          // Mark last task as completed and redirect
-          setCompletedTasks((completed) => [...completed, prev])
-          clearInterval(interval)
-          setTimeout(() => {
-            router.push(`/blog/${draftId}/editor`)
-          }, 1000)
-          return prev
-        }
-      })
-    }, 2000) // Each task takes 2 seconds (content generation takes longer)
+    // Skip the slow animation and redirect immediately
+    const timer = setTimeout(() => {
+      router.push(`/blog/${draftId}/editor`)
+    }, 500) // Just 0.5 seconds instead of 8+ seconds
 
-    return () => clearInterval(interval)
-  }, [draftId, router, tasks.length])
+    return () => clearTimeout(timer)
+  }, [draftId, router])
 
   return (
     <div className="min-h-screen bg-gray-50">
