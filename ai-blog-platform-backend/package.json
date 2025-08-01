@@ -1,10 +1,11 @@
 {
-  "name": "ai-blog-platform-backend",
-  "version": "1.0.0",
-  "description": "AI-driven blog content generation platform backend",
+  "name": "wattmonk-ai-blog-platform",
+  "version": "3.0.0",
+  "description": "Production-ready AI blog generation platform for WattMonk",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
     "dev": "nodemon server.js",
     "test": "jest",
     "seed": "node scripts/seedDatabase.js",
@@ -16,7 +17,9 @@
     "quick-start": "node scripts/quickStart.js",
     "setup-n8n": "node scripts/setupN8N.js",
     "test-n8n": "node scripts/setupN8N.js test-webhook",
-    "test-n8n-wordpress": "node scripts/setupN8N.js test-wordpress"
+    "test-n8n-wordpress": "node scripts/setupN8N.js test-wordpress",
+    "lint": "echo 'Linting not configured'",
+    "clean": "rm -rf node_modules package-lock.json && npm install"
   },
   "keywords": [
     "ai",

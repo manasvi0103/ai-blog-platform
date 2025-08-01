@@ -1,8 +1,22 @@
-// services/imageService.js
+/**
+ * AI Image Generation Service for WattMonk Blog Platform
+ *
+ * Features:
+ * - AI-powered image generation using Gemini API
+ * - WattMonk logo overlay with brand styling
+ * - Custom title overlays for blog images
+ * - S3 cloud storage integration
+ * - Multiple image styles and formats
+ *
+ * @author WattMonk Technologies
+ * @version 2.0.0
+ */
+
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const sharp = require('sharp');
 const s3Service = require('./s3Service');
 
 class ImageService {
@@ -23,17 +37,17 @@ class ImageService {
     });
   }
 
-  async generateImageWithAI(prompt, style = 'realistic', imageType = 'featured') {
+  async generateImageWithAI(prompt, style = 'realistic', imageType = 'featured', blogTitle = '', customTitle = '') {
     try {
       console.log(`🎨 Generating AI image with prompt: "${prompt}" (style: ${style}, type: ${imageType})`);
 
-      // Enhanced prompt for solar industry context
-      const enhancedPrompt = `${prompt}, professional solar industry, high quality, ${style} style, clean energy, modern technology`;
+      // Enhanced prompt for solar industry context - optimized for 1200x1200 square format
+      const enhancedPrompt = `${prompt}, professional solar industry, high quality, ${style} style, clean energy, modern technology, square composition, centered subject, 1:1 aspect ratio`;
 
       // Use ONLY Gemini for image generation (highest quality)
       if (process.env.GEMINI_API_KEY) {
         console.log('🤖 Using Gemini for image generation (ONLY AI service)');
-        return await this.generateWithGemini(enhancedPrompt, style, imageType);
+        return await this.generateWithGemini(enhancedPrompt, style, imageType, blogTitle, customTitle);
       } else {
         throw new Error('Gemini API key not configured. Image generation requires Gemini API.');
       }
@@ -92,7 +106,7 @@ class ImageService {
     }
   }
 
-  async generateWithGemini(prompt, style, imageType = 'featured') {
+  async generateWithGemini(prompt, style, imageType = 'featured', blogTitle = '', customTitle = '') {
     try {
       // Since Google's Imagen models require Vertex AI (complex setup),
       // we'll use a high-quality alternative that provides excellent results
@@ -184,14 +198,20 @@ class ImageService {
         }
       }
 
+      // Generate a related title for the image (use custom title if provided)
+      const imageTitle = customTitle || this.generateImageTitle(blogTitle, prompt);
+
+      // Process clean image to 1200x1200 without any overlays
+      const imageWithLogo = await this.processCleanImage(imageResponse.data);
+
       // Upload to S3 if configured, otherwise save locally
       if (s3Service.isConfigured()) {
-        console.log('☁️ Uploading Gemini image to S3...');
+        console.log('☁️ Uploading Gemini image with WattMonk logo to S3...');
 
         const s3Result = await s3Service.uploadAIImage(
-          imageResponse.data,
+          imageWithLogo,
           prompt,
-          'gemini-enhanced'
+          'gemini-enhanced-wattmonk'
         );
 
         return {
@@ -199,11 +219,12 @@ class ImageService {
           imageUrl: s3Result.url,
           prompt: prompt,
           style: style,
-          source: 'gemini-enhanced',
+          source: 'gemini-enhanced-wattmonk',
           quality: 'high-resolution',
           model: 'flux-enhanced',
           storage: 's3',
-          s3Key: s3Result.key
+          s3Key: s3Result.key,
+          hasLogo: true
         };
       } else {
         // Fallback to local storage
@@ -215,11 +236,11 @@ class ImageService {
           console.log('📁 Created uploads directory:', uploadsDir);
         }
 
-        const filename = `gemini-enhanced-${Date.now()}.jpg`;
+        const filename = `gemini-enhanced-wattmonk-${Date.now()}.jpg`;
         const filepath = path.join(uploadsDir, filename);
 
-        fs.writeFileSync(filepath, imageResponse.data);
-        console.log('💾 High-quality Gemini-style image saved locally:', filepath);
+        fs.writeFileSync(filepath, imageWithLogo);
+        console.log('💾 High-quality Gemini-style image with WattMonk logo saved locally:', filepath);
 
         // Verify file exists and get size
         if (fs.existsSync(filepath)) {
@@ -234,10 +255,11 @@ class ImageService {
           imageUrl: `/uploads/${filename}`,
           prompt: prompt,
           style: style,
-          source: 'gemini-enhanced',
+          source: 'gemini-enhanced-wattmonk',
           quality: 'high-resolution',
           model: 'flux-enhanced',
-          storage: 'local'
+          storage: 'local',
+          hasLogo: true
         };
       }
     } catch (error) {
@@ -246,21 +268,90 @@ class ImageService {
     }
   }
 
-  // Removed Hugging Face method - using ONLY Gemini for image generation
+  /**
+   * Process image to 1200x1200 size without any overlays
+   * Clean images for WordPress feature image section
+   */
+  async processCleanImage(imageBuffer) {
+    try {
+      console.log('🖼️ Processing clean image to 1200x1200...');
 
-  // Removed OpenAI method - using ONLY Gemini for image generation
+      const sharp = require('sharp');
 
-  // Removed Pollinations method - using ONLY Gemini for image generation
+      // Resize image to exactly 1200x1200 with smart cropping
+      const processedImage = await sharp(imageBuffer)
+        .resize(1200, 1200, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .jpeg({
+          quality: 95,
+          progressive: true
+        })
+        .toBuffer();
+
+      console.log('✅ Clean image processed successfully (1200x1200)');
+      return processedImage;
+
+    } catch (error) {
+      console.warn('⚠️ Failed to process clean image, using original:', error.message);
+      return imageBuffer;
+    }
+  }
+
+  // Generate a related title for the image based on blog title or prompt
+  generateImageTitle(blogTitle, prompt) {
+    try {
+      // Extract key terms from blog title or prompt
+      const text = blogTitle || prompt || '';
+
+      // Common solar/energy keywords to prioritize
+      const solarKeywords = [
+        'solar', 'pv', 'photovoltaic', 'panel', 'energy', 'renewable',
+        'installation', 'system', 'power', 'grid', 'battery', 'inverter',
+        'efficiency', 'savings', 'green', 'sustainable', 'clean', 'electric',
+        'residential', 'commercial', 'rooftop', 'ground', 'mount', 'permit',
+        'inspection', 'maintenance', 'monitoring', 'agrivoltaic', 'utility'
+      ];
+
+      // Extract relevant words (remove common words)
+      const words = text.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 2)
+        .filter(word => !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use'].includes(word));
+
+      // Prioritize solar keywords
+      const relevantWords = words.filter(word =>
+        solarKeywords.some(keyword => word.includes(keyword) || keyword.includes(word))
+      );
+
+      // If we have solar keywords, use them; otherwise use first few words
+      const titleWords = relevantWords.length > 0 ? relevantWords.slice(0, 3) : words.slice(0, 3);
+
+      // Create title (max 25 characters for overlay)
+      let title = titleWords.join(' ').toUpperCase();
+      if (title.length > 25) {
+        title = title.substring(0, 22) + '...';
+      }
+
+      return title || 'SOLAR GUIDE';
+
+    } catch (error) {
+      console.warn('Error generating image title:', error);
+      return 'SOLAR GUIDE';
+    }
+  }
 
   // WordPress-compatible image dimensions
   getWordPressDimensions(imageType) {
     const dimensions = {
-      'featured': { width: 1200, height: 630 },    // WordPress featured image (16:8.4 ratio, perfect for social sharing)
-      'content': { width: 1024, height: 768 },     // Content images (4:3 ratio, good for articles)
+      'featured': { width: 1200, height: 1200 },   // Square format as requested (1200x1200)
+      'content': { width: 1200, height: 1200 },    // Square format for content images
       'thumbnail': { width: 300, height: 300 },    // Square thumbnails
-      'banner': { width: 1920, height: 1080 },     // Full-width banners (16:9 ratio)
-      'square': { width: 800, height: 800 },       // Square images for social media
-      'portrait': { width: 600, height: 800 }      // Portrait orientation (3:4 ratio)
+      'banner': { width: 1200, height: 1200 },     // Square format for banners
+      'square': { width: 1200, height: 1200 },     // 1200x1200 as requested
+      'portrait': { width: 1200, height: 1200 }    // Square format
     };
 
     return dimensions[imageType] || dimensions['featured']; // Default to featured image size

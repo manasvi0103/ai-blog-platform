@@ -19,20 +19,30 @@ const sampleCompanies = [
     aboutCompany: 'WattMonk is a leading provider of solar design and engineering services, helping solar installers and developers streamline their project workflows.',
     tone: 'professional',
     brandVoice: 'Expert, reliable, and innovation-focused. We speak with authority about solar technology while remaining approachable and solution-oriented.',
-    targetAudience: ['Solar installers', 'Solar developers', 'EPC companies', 'Property owners']
+    targetAudience: ['Solar installers', 'Solar developers', 'EPC companies', 'Property owners'],
+    wordpressConfig: {
+      baseUrl: process.env.WATTMONK_WORDPRESS_BASE_URL || 'https://www.wattmonk.com',
+      username: process.env.WATTMONK_WORDPRESS_USERNAME || '',
+      appPassword: process.env.WATTMONK_WORDPRESS_APP_PASSWORD || ''
+    }
   },
   {
-    name: 'TechFlow Solutions',
+    name: 'Ensite',
     servicesOffered: [
-      { name: 'Web Development', description: 'Custom web application development' },
-      { name: 'AI Integration', description: 'AI and machine learning solutions' },
-      { name: 'Cloud Services', description: 'Cloud infrastructure and migration' }
+      { name: 'Site Survey', description: 'Professional solar site survey services' },
+      { name: 'Site Assessment', description: 'Comprehensive site assessment and analysis' },
+      { name: 'Project Planning', description: 'Solar project planning and optimization' }
     ],
-    serviceOverview: 'TechFlow Solutions delivers cutting-edge technology solutions including web development, AI integration, and cloud services.',
-    aboutCompany: 'A forward-thinking technology company specializing in innovative software solutions and digital transformation.',
-    tone: 'technical',
-    brandVoice: 'Innovative, technical, and forward-thinking. We communicate complex technical concepts clearly and emphasize cutting-edge solutions.',
-    targetAudience: ['Enterprises', 'Startups', 'Tech professionals', 'Business leaders']
+    serviceOverview: 'Ensite specializes in solar site surveys and assessments, providing accurate data for optimal solar project planning and execution.',
+    aboutCompany: 'Ensite is a specialized solar site survey and design firm dedicated to streamlining project operations for residential solar installers.',
+    tone: 'professional',
+    brandVoice: 'Precise, reliable, and detail-oriented. We provide accurate site data and technical expertise for successful solar installations.',
+    targetAudience: ['Solar installers', 'Solar contractors', 'Project developers', 'Property owners'],
+    wordpressConfig: {
+      baseUrl: process.env.ENSITE_WORDPRESS_BASE_URL || 'https://ensite-website.com',
+      username: process.env.ENSITE_WORDPRESS_USERNAME || '',
+      appPassword: process.env.ENSITE_WORDPRESS_APP_PASSWORD || ''
+    }
   }
 ];
 

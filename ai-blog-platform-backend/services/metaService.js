@@ -22,7 +22,7 @@ class MetaService {
         console.warn('⚠️ Could not fetch trending context for meta:', error.message);
       }
 
-      const prompt = `Generate SEO-optimized meta data for a blog post about "${keyword.focusKeyword}" for a solar company called "${companyInfo.companyName}".
+      const prompt = `Generate RankMath SEO-optimized meta data for a blog post about "${keyword.focusKeyword}" for a solar company called "${companyInfo.companyName}".
 
 Company Context:
 - Company: ${companyInfo.companyName}
@@ -33,20 +33,24 @@ Company Context:
 - Objective: ${keyword.objective}
 ${trendingContext}
 
-Generate the following in JSON format with STRICT SEO requirements:
+Generate the following in JSON format with RankMath SEO requirements:
 {
-  "h1": "Main heading for the blog post (60-70 characters, MUST include focus keyword '${keyword.focusKeyword}' prominently)",
-  "metaTitle": "SEO title for search engines (50-60 characters, MUST include focus keyword '${keyword.focusKeyword}' and company name)",
-  "metaDescription": "Meta description for search results (150-160 characters, MUST include focus keyword '${keyword.focusKeyword}' within first 120 characters)"
+  "h1": "Main H1 heading (50-60 characters, MUST start with focus keyword '${keyword.focusKeyword}')",
+  "metaTitle": "SEO title for search engines (50-60 characters, focus keyword at beginning, include company name)",
+  "metaDescription": "Meta description (140-155 characters, focus keyword in first 120 chars, include CTA)",
+  "focusKeyword": "${keyword.focusKeyword}",
+  "seoScore": "Estimated RankMath SEO score out of 100",
+  "keywordPlacement": "Focus keyword placement strategy"
 }
 
-Requirements:
-- H1 should be engaging and include the focus keyword naturally
-- Meta title should be under 60 characters and include both keyword and company name
-- Meta description should be under 160 characters and compelling for clicks
-- All should be optimized for solar industry SEO
+RankMath SEO Requirements:
+- H1: Focus keyword at the beginning, power words, under 60 characters
+- Meta Title: Focus keyword first, company name, compelling, 50-60 chars
+- Meta Description: Focus keyword early, benefit-focused, CTA, 140-155 chars
+- Optimize for click-through rate and search ranking
+- Include emotional triggers and power words
 - Make it relevant to ${keyword.targetAudience}
-- Consider trending topics if they align with the keyword and target audience
+- Consider trending topics for better engagement
 
 Example format:
 {

@@ -353,7 +353,7 @@ COMPANY CONTEXT FOR ${companyName}:
 Generate a complete blog article about "${selectedKeyword}" with the following structure as JSON:
 {
   "title": "${selectedH1}",
-  "introduction": "First paragraph MUST START with '${selectedKeyword}' as the very first words. Include compelling insight/stat about ${selectedKeyword} (${introWords} words) - MUST mention ${selectedKeyword} 3-4 times total",
+  "introduction": "First paragraph MUST START with '${selectedKeyword} is' or '${selectedKeyword} has become' as the very first words. Include compelling insight/stat about ${selectedKeyword} (${introWords} words) - MUST mention '${selectedKeyword}' exactly 4-5 times total",
   "sections": [
     {
       "h2": "What is ${selectedKeyword}? [or similar ${selectedKeyword} heading]",
@@ -531,6 +531,14 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
     if (!text) return text;
 
     return text
+      // Remove JSON wrapper if present
+      .replace(/^```json\s*/, '')
+      .replace(/\s*```$/, '')
+      .replace(/^```\s*/, '')
+      .replace(/\s*```$/, '')
+      // Remove any JSON structure markers
+      .replace(/^\s*{\s*"content":\s*"/, '')
+      .replace(/"\s*}\s*$/, '')
       // Remove bold markdown
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/__(.*?)__/g, '$1')
@@ -545,8 +553,14 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
       // Remove code blocks
       .replace(/```[\s\S]*?```/g, '')
       .replace(/`([^`]+)`/g, '$1')
+      // Remove escaped quotes
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      // Remove any remaining backslashes
+      .replace(/\\\\/g, '')
       // Clean up extra whitespace
       .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .replace(/^\s+|\s+$/g, '')
       .trim();
   }
 
@@ -556,9 +570,12 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
 
       const result = await this.generateContent(prompt, companyContext);
 
+      // Clean the content to remove any markdown formatting or unwanted characters
+      const cleanedContent = this.cleanMarkdown(result.content);
+
       return {
-        content: result.content,
-        wordCount: result.content.split(' ').length,
+        content: cleanedContent,
+        wordCount: cleanedContent.split(' ').length,
         blockType: blockType
       };
     } catch (error) {
@@ -566,10 +583,11 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
 
       // Fallback content based on block type
       const fallbackContent = this.getFallbackContent(blockType, companyContext);
+      const cleanedFallback = this.cleanMarkdown(fallbackContent);
 
       return {
-        content: fallbackContent,
-        wordCount: fallbackContent.split(' ').length,
+        content: cleanedFallback,
+        wordCount: cleanedFallback.split(' ').length,
         blockType: blockType
       };
     }

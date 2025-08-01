@@ -93,8 +93,15 @@ class BlogController {
       });
       contentBlocks.push(await h1Block.save());
 
-      // Introduction paragraph
-      const introPrompt = `Write an engaging introduction paragraph for an article titled "${h1Title}". Make it compelling and include the main value proposition.`;
+      // Introduction paragraph - RankMath SEO optimized
+      const introPrompt = `Write a RankMath SEO-optimized introduction paragraph for an article titled "${h1Title}".
+      Requirements:
+      - Include focus keyword in first 100 words
+      - 150-200 words total
+      - Hook the reader with a compelling opening
+      - Include main value proposition
+      - Use short sentences for better readability
+      - End with a preview of what readers will learn`;
       const introContent = await geminiService.generateContent(introPrompt, company);
       
       const introBlock = new ContentBlock({

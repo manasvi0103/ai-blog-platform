@@ -2,10 +2,12 @@
 // Enhanced WordPress API routes with CORS support
 
 const express = require('express');
-const wordpressService = require('../services/wordpressService');
-const n8nWordpressService = require('../services/n8nWordpressService');
+const WordPressService = require('../services/wordpressService');
 const Draft = require('../models/Draft');
 const router = express.Router();
+
+// Initialize WordPress service
+const wordpressService = new WordPressService();
 
 // Basic health check route
 router.get('/health', (req, res) => {
