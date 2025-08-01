@@ -658,4 +658,4 @@ npm run cleanup
 - **Backend**: `ai-blog-platform-backend/.env`
 - **Frontend**: `ai-blog-platform-frontend/.env.local`
 
-**Last Updated**: January 2025 | **Version**: 2.0.0
+**Last Updated**: August 2025 | **Version**: 2.0.0
